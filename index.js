@@ -65,24 +65,19 @@ async function organizeFile(filePath, targetDir) {
             "-" +
             fileDateDict.modMon;
 
-        try {
-            if (fs.existsSync(targetYearPath)) {
-                if (fs.existsSync(targetMonthPath)) {
-                } else {
-                    await fs.promises.mkdir(targetMonthPath);
-                }
+        if (fs.existsSync(targetYearPath)) {
+            if (fs.existsSync(targetMonthPath)) {
             } else {
-                await fs.promises.mkdir(targetYearPath);
-                await fs.promises.mkdir(targetMonthPath);
+                fs.mkdirSync(targetMonthPath);
             }
-        } catch (err) {
-            console.log(`Attempted to create existing directory, moving file`);
-        } finally {
-            await fs.promises.rename(
-                newFileAttributes.path,
-                targetMonthPath + "/" + newFileAttributes.name
-            );
+        } else {
+            fs.mkdirSync(targetYearPath);
+            fs.mkdirSync(targetMonthPath);
         }
+        await fs.promises.rename(
+            newFileAttributes.path,
+            targetMonthPath + "/" + newFileAttributes.name
+        );
     } catch (err) {
         console.log(err);
     }
@@ -94,6 +89,7 @@ function unorganizedDirNavigator(sourceDir, targetDir) {
     for (const i in contents) {
         let item = `${sourceDir}/${contents[i]}`;
         if (isFile(item)) {
+            console.log(`moving ${item}`);
             organizeFile(item, targetDir);
         } else if (isDir(item)) {
             unorganizedDirNavigator(item, targetDir);
