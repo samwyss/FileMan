@@ -1,7 +1,8 @@
 import fs from "fs";
 
 //TODO: Clean up and optimize code
-//TODO: Look into target directory and look for last file name so the rename to move command also names it appropriately, does it need randomized at all if this is done?
+//TODO: Figure out why some files do not get moved, too many asynch moves at once?
+//TODO: Write renaming function that goes into target directory and renames any file not of the form YYYY-MM-XX
 
 function randomString() {
     return new Promise((resolve, reject) => {
@@ -38,6 +39,14 @@ function getFileDateDict(file) {
     });
 }
 
+function isDir(path) {
+    return fs.statSync(path).isDirectory();
+}
+
+function isFile(path) {
+    return fs.statSync(path).isFile();
+}
+
 async function organizeFile(filePath, targetDir) {
     try {
         const file = await fs.promises.stat(filePath);
@@ -67,7 +76,7 @@ async function organizeFile(filePath, targetDir) {
                 await fs.promises.mkdir(targetMonthPath);
             }
         } catch (err) {
-            console.log(`${targetMonthPath} already exists, moving file`);
+            console.log(`Attempted to create existing directory, moving file`);
         } finally {
             await fs.promises.rename(
                 newFileAttributes.path,
@@ -76,5 +85,18 @@ async function organizeFile(filePath, targetDir) {
         }
     } catch (err) {
         console.log(err);
+    }
+}
+
+function unorganizedDirNavigator(sourceDir, targetDir) {
+    let contents = fs.readdirSync(sourceDir);
+
+    for (const i in contents) {
+        let item = `${sourceDir}/${contents[i]}`;
+        if (isFile(item)) {
+            organizeFile(item, targetDir);
+        } else if (isDir(item)) {
+            unorganizedDirNavigator(item, targetDir);
+        }
     }
 }
