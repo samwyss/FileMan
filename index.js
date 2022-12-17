@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs, { rename } from "fs";
 
 function getFileAttributes(path) {
     return new Promise((resolve, reject) => {
@@ -103,13 +103,114 @@ async function organizeFile(filePath, targetDir) {
 }
 
 function unorganizedFileFinder(sourceDir, targetDir) {
-    let contents = fs.readdirSync(sourceDir); // returns an array containing all contents in "sourceDir"
-    for (const i in contents) {
-        let item = `${sourceDir}/${contents[i]}`; // absolute path of item in "sourceDir"
-        if (isFile(item)) {
-            organizeFile(item, targetDir); // if the file is an item then it gets organized
-        } else if (isDir(item)) {
-            unorganizedFileFinder(item, targetDir); // if the item is a directory then it gets entered
+    try {
+        const contents = fs.readdirSync(sourceDir); // returns an array containing all contents in "sourceDir"
+        for (let i in contents) {
+            const item = `${sourceDir}/${contents[i]}`; // absolute path of item in "sourceDir"
+            if (isFile(item)) {
+                organizeFile(item, targetDir); // if the file is an item then it gets organized
+            } else if (isDir(item)) {
+                unorganizedFileFinder(item, targetDir); // if the item is a directory then it gets entered
+            }
         }
+    } catch (err) {
+        console.error(
+            `Unable to organize contents of ${sourceDir} into ${targetDir}`
+        ); // logs an error if the contents in "sourceDir" were unable to be moved into "targetDir"
     }
 }
+
+function isValidName(fileAttributes) {
+    try {
+        const regex = /\d{4}-\d{2}_\d*/; // basic regex to find patterns of the form YYYY-MM_X...
+        if (fileAttributes.name.match(regex)) {
+            return true; // all names that match the above regex return true
+        } else {
+            return false; // all names that do not match the above regex return false
+        }
+    } catch (err) {
+        console.error(
+            `Unable to determine if ${fileAttributes.name} at ${fileAttributes.path} is a valid file name`
+        ); // logs an error if it was not able to determine if a given file had a valid name
+    }
+}
+
+function getLargestOrganizedFileNumber(fileAttributes, largestFileNumber) {
+    try {
+        const fileNumber = fileAttributes.name.split("_")[1];
+        if (Number(fileNumber) >= Number(largestFileNumber)) {
+            return fileNumber;
+        } else {
+            return largestFileNumber;
+        }
+    } catch (err) {
+        console.error(
+            `Unable to obtain the largest organized file number using largestFileNumber = ${largestFileNumber} and current file = ${fileAttributes}`
+        );
+    }
+}
+
+function renameFileQueue(queue, num) {
+    return new Promise((resolve, reject) => {
+        try {
+            num = Number(num);
+            while (queue.length) {
+                num += 1;
+                let file = queue.shift();
+                let newName =
+                    file.parentDir +
+                    "/" +
+                    file.modYear +
+                    "-" +
+                    file.modMon +
+                    "_" +
+                    num +
+                    file.extension;
+                fs.renameSync(file.path, newName);
+            }
+        } catch (err) {
+            console.err(err);
+        }
+    });
+}
+
+async function verifyOrganizedFileNames(targetDir) {
+    try {
+        const years = fs.readdirSync(targetDir); // returns an array containing all year directories in "targetDir"
+        for (let i in years) {
+            const year = `${targetDir}/${years[i]}`; // absolute path to a year directory in "targetDir"
+            const months = fs.readdirSync(year);
+            for (let j in months) {
+                const month = `${year}/${months[j]}`; // absolute path to a month directory in "targetDir/year"
+                const files = fs.readdirSync(month);
+                var renameQueue = [];
+                var largestOrganizedFileNumber = -1;
+                for (let k in files) {
+                    const file = `${month}/${files[k]}`; // absolute path to a file in "targetDir/year/month"
+                    let fileAttributes = await getFileAttributes(file); //TODO: make a synchronous version of this function? Look into screenshot, something may be able to be put into a function such that a return is waited for
+                    if (isValidName(fileAttributes)) {
+                        largestOrganizedFileNumber =
+                            getLargestOrganizedFileNumber(
+                                fileAttributes,
+                                largestOrganizedFileNumber
+                            );
+                    } else {
+                        renameQueue.push(fileAttributes);
+                    }
+                    //TODO: between this and above todo needs to be in an await function
+                }
+                await renameFileQueue(renameQueue, largestOrganizedFileNumber);
+            }
+        }
+    } catch (err) {
+        console.error(error);
+    }
+}
+
+function driver() {
+    unorganizedFileFinder(,);
+
+    verifyOrganizedFileNames();
+}
+
+driver(); // something in verifyOrganizedFileNames is returning before
