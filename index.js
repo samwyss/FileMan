@@ -98,6 +98,7 @@ function organizeFile(filePath, targetDir) {
 
 function unorganizedFileFinder(sourceDir, targetDir) {
     try {
+        console.log("Moving Files");
         const contents = fs.readdirSync(sourceDir); // returns an array containing all contents in "sourceDir"
         for (let i in contents) {
             const item = `${sourceDir}/${contents[i]}`; // absolute path of item in "sourceDir"
@@ -186,8 +187,8 @@ function verifyOrganizedDirectoryNames(files, month) {
 
 function organizedDirectoryNavigator(targetDir) {
     try {
+        console.log("Validating File Names");
         const years = fs.readdirSync(targetDir); // returns an array containing all year directories in "targetDir"
-        console.log(years);
         for (let i in years) {
             const year = `${targetDir}/${years[i]}`; // absolute path to a year directory in "targetDir"
             const months = fs.readdirSync(year);
@@ -203,8 +204,8 @@ function organizedDirectoryNavigator(targetDir) {
 }
 
 function driver() {
-    let sPath = ;
-    let tPath = ;
+    let sPath = "C:/Users/sjwys/Desktop/source - Copy";
+    let tPath = "C:/Users/sjwys/Desktop/target";
     unorganizedFileFinder(sPath, tPath);
     organizedDirectoryNavigator(tPath);
 }
