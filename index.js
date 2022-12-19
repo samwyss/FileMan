@@ -204,8 +204,8 @@ function organizedDirectoryNavigator(targetDir) {
 }
 
 function driver() {
-    let sPath = "C:/Users/sjwys/Desktop/source - Copy";
-    let tPath = "C:/Users/sjwys/Desktop/target";
+    let sPath = "";
+    let tPath = "";
     unorganizedFileFinder(sPath, tPath);
     organizedDirectoryNavigator(tPath);
 }
