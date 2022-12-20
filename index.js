@@ -19,7 +19,11 @@ function getFileAttributes(path) {
         }; // object containing all relevant file information
         return fileAttributes;
     } catch (err) {
-        reject(console.error(`Unable to obtain attributes of ${path}`)); // returns an error if the attributes of "path" cannot be obtained
+        reject(
+            console.error(
+                `Error in function getFileAttributes with path ${path}: ${err}`
+            )
+        ); // returns an error if the attributes of "path" cannot be obtained
     }
 }
 
@@ -27,7 +31,7 @@ function isDir(path) {
     try {
         return fs.statSync(path).isDirectory(); // returns true if file is a directory, false if it is a file
     } catch (err) {
-        return false; // returns false for invalid files
+        return false; // returns false for invalid directories
     }
 }
 
@@ -58,7 +62,7 @@ function setRandomFileName(fileAttributes) {
         return fileAttributes;
     } catch (err) {
         console.error(
-            `Unable to randomize name of file ${fileAttributes.path}`
+            `Error in function setRandomFileName with file ${fileAttributes.path}: ${err}`
         ); // returns if the file represented by fileAttributes cannot be renamed
     }
 }
@@ -92,13 +96,15 @@ function organizeFile(filePath, targetDir) {
                 fileAttributes.extension
         ); // moves the file to the corresponding "targetYearPath" and "targetMonthPath" in "targetDir"
     } catch (err) {
-        console.error(`The file ${filePath} was not able to be organized`); // logs an error if the file was not able to be moved
+        console.error(
+            `Error in function organizeFile with path ${filePath} and target ${targetDir}: ${err}`
+        ); // logs an error if the file was not able to be moved
     }
 }
 
 function unorganizedFileFinder(sourceDir, targetDir) {
     try {
-        console.log("Moving Files");
+        console.log(`Moving files in ${sourceDir}`);
         const contents = fs.readdirSync(sourceDir); // returns an array containing all contents in "sourceDir"
         for (let i in contents) {
             const item = `${sourceDir}/${contents[i]}`; // absolute path of item in "sourceDir"
@@ -110,14 +116,14 @@ function unorganizedFileFinder(sourceDir, targetDir) {
         }
     } catch (err) {
         console.error(
-            `Unable to organize contents of ${sourceDir} into ${targetDir}`
+            `Error in function unorganizedFileFinder with source ${sourceDir} and target ${targetDir}: ${err}`
         ); // logs an error if the contents in "sourceDir" were unable to be moved into "targetDir"
     }
 }
 
 function isValidName(fileAttributes) {
     try {
-        const regex = /\d{4}-\d{2}_\d*/; // basic regex to find patterns of the form YYYY-MM_X...
+        const regex = /\d{4}-\d{2}_\d*/; // basic regex to find patterns of the form YYYY-MM_xxxx
         if (fileAttributes.name.match(regex)) {
             return true; // all names that match the above regex return true
         } else {
@@ -125,32 +131,32 @@ function isValidName(fileAttributes) {
         }
     } catch (err) {
         console.error(
-            `Unable to determine if ${fileAttributes.name} at ${fileAttributes.path} is a valid file name`
+            `Error in function isValidName with file ${fileAttributes}: ${err}`
         ); // logs an error if it was not able to determine if a given file had a valid name
     }
 }
 
 function getLargestOrganizedFileNumber(fileAttributes, largestFileNumber) {
     try {
-        const fileNumber = fileAttributes.name.split("_")[1];
+        const fileNumber = fileAttributes.name.split("_")[1]; // obtains the file number from the file name
         if (Number(fileNumber) >= Number(largestFileNumber)) {
-            return fileNumber;
+            return fileNumber; // returns the file number if it is larger than the current largest file number
         } else {
-            return largestFileNumber;
+            return largestFileNumber; // returns the largest file number if the current number is smaller than the largest file number
         }
     } catch (err) {
         console.error(
-            `Unable to obtain the largest organized file number using largestFileNumber = ${largestFileNumber} and current file = ${fileAttributes}`
-        );
+            `Error in function getLargestOrganizedFileNumber with current file ${fileAttributes} and initial largest file number ${largestFileNumber}: ${err}`
+        ); // logs an error if the largest file number cannot be obtained
     }
 }
 
 function renameFileQueue(queue, num) {
     try {
-        num = Number(num);
+        num = Number(num); // converts object to number primitive, this corresponds to the largest number found in "getLargestOrganizedFileNumber"
         while (queue.length) {
-            num += 1;
-            let file = queue.shift();
+            num += 1; // increase the number to avoid naming conflicts
+            let file = queue.shift(); //pull fileAttributes object out of the queue
             let newName =
                 file.parentDir +
                 "/" +
@@ -159,35 +165,43 @@ function renameFileQueue(queue, num) {
                 file.modMon +
                 "_" +
                 num +
-                file.extension;
+                file.extension; // new absolute file path
             fs.renameSync(file.path, newName);
         }
     } catch (err) {
-        console.err(err);
+        console.err(
+            `Error in function renameFileQueue with queue ${queue} and largest file number ${num}: ${err}`
+        );
     }
 }
 
 function verifyOrganizedDirectoryNames(files, month) {
-    var renameQueue = [];
-    var largestOrganizedFileNumber = -1;
-    for (let k in files) {
-        const file = `${month}/${files[k]}`; // absolute path to a file in "targetDir/year/month"
-        let fileAttributes = getFileAttributes(file);
-        if (isValidName(fileAttributes)) {
-            largestOrganizedFileNumber = getLargestOrganizedFileNumber(
-                fileAttributes,
-                largestOrganizedFileNumber
-            );
-        } else {
-            renameQueue.push(fileAttributes);
+    try {
+        console.log(`Verifying file names in ${month}`);
+        var renameQueue = []; // empty queue of fileAttribute objects to be renamed
+        var largestOrganizedFileNumber = -1; // -1 corresponds to 0 organized files in "month" absolute path
+        for (let k in files) {
+            const file = `${month}/${files[k]}`; // absolute path to a file in "targetDir/year/month"
+            let fileAttributes = getFileAttributes(file);
+            if (isValidName(fileAttributes)) {
+                largestOrganizedFileNumber = getLargestOrganizedFileNumber(
+                    fileAttributes,
+                    largestOrganizedFileNumber
+                ); // finds the file with the largest number (xxxx) in file name of the form YYYY-MM_xxxx.ext
+            } else {
+                renameQueue.push(fileAttributes); // if file name is not valid, add to rename queue
+            }
         }
+        renameFileQueue(renameQueue, largestOrganizedFileNumber); // organize queue of improperly named files
+    } catch (err) {
+        console.log(
+            `Error in function verifyOrganizedDirectoryNames with files ${files} and month ${month}: ${err}`
+        );
     }
-    renameFileQueue(renameQueue, largestOrganizedFileNumber);
 }
 
 function organizedDirectoryNavigator(targetDir) {
     try {
-        console.log("Validating File Names");
         const years = fs.readdirSync(targetDir); // returns an array containing all year directories in "targetDir"
         for (let i in years) {
             const year = `${targetDir}/${years[i]}`; // absolute path to a year directory in "targetDir"
@@ -199,15 +213,17 @@ function organizedDirectoryNavigator(targetDir) {
             }
         }
     } catch (err) {
-        console.error(err);
+        console.error(
+            `Error in function organizedDirectoryNavigator with target ${targetDir}: ${err}`
+        );
     }
 }
 
 function driver() {
-    let sPath = "";
-    let tPath = "";
-    unorganizedFileFinder(sPath, tPath);
-    organizedDirectoryNavigator(tPath);
+    let sPath = ""; // Absolute path to main source directory
+    let tPath = ""; // absolute path to main target directory
+    unorganizedFileFinder(sPath, tPath); // finds all unorganized files in "sPath" and moves them to "tPath" with randomized names to avoid file conflicts
+    organizedDirectoryNavigator(tPath); // navigates organized file tree looking for and renaming all files that do not match the form of "YYYY-MM_xxxx.ext"
 }
 
-driver();
+driver(); // calls driver function
