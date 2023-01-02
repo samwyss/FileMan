@@ -1,6 +1,6 @@
 {
     "name": "fileman",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A personal File Management System Built on node.js",
     "main": "index.js",
     "type": "module",
